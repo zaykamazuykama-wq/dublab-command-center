@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DubLab Command Center MVP 6</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f4f5;color:#18181b}
+    h1{margin:0;font-size:30px;line-height:1.05}
+    h2{margin:0 0 8px 0}
+    .hidden{display:none!important}
+    .login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0b0f;color:#fff;padding:20px}
+    .box{width:100%;max-width:430px;background:#15151d;border:1px solid #2a2a35;border-radius:24px;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+    .logo{width:54px;height:54px;border-radius:18px;background:#242432;display:grid;place-items:center;font-size:26px}
+    .sub{color:#71717a;font-size:14px;margin-top:6px}.login .sub{color:#a1a1aa}
+    input,textarea,select{width:100%;border:1px solid #d4d4d8;border-radius:14px;padding:13px 14px;font:inherit;background:white;color:#18181b}
+    .login input{background:#20202b;color:white;border-color:#343445}
+    textarea{min-height:125px;resize:vertical}
+    button{border:0;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;background:#18181b;color:white}
+    button.secondary{background:white;color:#18181b;border:1px solid #d4d4d8}
+    button.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+    button.gold{background:#eab308;color:#18181b}
+    .wrap{max-width:1180px;margin:0 auto;padding:22px}
+    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:22px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    @media(max-width:850px){.grid,.grid2{grid-template-columns:1fr} h1{font-size:28px}}
+    .card{background:white;border:1px solid #e4e4e7;border-radius:22px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+    .stack{display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .pill{display:inline-block;background:#f4f4f5;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;color:#52525b}
+    .pill.approved{background:#dcfce7;color:#166534}.pill.rejected{background:#fee2e2;color:#991b1b}.pill.draft{background:#fef9c3;color:#854d0e}
+    .score{font-size:28px;font-weight:900}.small{font-size:13px;color:#71717a}.title{font-size:21px;font-weight:900;margin:12px 0 8px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .notice{background:#ecfeff;border:1px solid #a5f3fc;color:#155e75;border-radius:18px;padding:14px;font-size:14px}
+    .mono{white-space:pre-wrap;background:#f4f4f5;border-radius:16px;padding:14px;font-size:14px;line-height:1.55}
+    table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #e4e4e7;text-align:left;padding:12px}th{font-size:13px;color:#71717a}
+    .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#18181b;color:white;padding:12px 16px;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.25);z-index:9999;font-size:14px;opacity:0;pointer-events:none;transition:.2s}
+    .toast.show{opacity:1;bottom:30px}
+  </style>
+</head>
+<body>
+  <section id="login" class="login">
+    <div class="box stack">
+      <div style="display:flex;gap:14px;align-items:center">
+        <div class="logo">🔒</div>
+        <div><h1>DubLab Command Center</h1><div class="sub">MVP 6 · calendar + organic sales system</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="pass" type="password" placeholder="Нууц үг" onkeydown="loginKey(event)" />
+        <button class="secondary" style="white-space:nowrap" onclick="togglePassword()">👁️ Харах</button>
+      </div>
+      <button onclick="enter()">Самбар руу орох</button>
+      <div id="err" class="small" style="color:#fca5a5"></div>
+      <div class="small" style="color:#a1a1aa">Нууц үг: <b>DubLab2026!</b>. Нэг орсны дараа refresh хийсэн ч гарахгүй.</div>
+    </div>
+  </section>
+
+  <main id="app" class="hidden">
+    <div class="wrap">
+      <header class="top">
+        <div>
+          <div class="small">Хувийн өсөлтийн систем · MVP 6</div>
+          <h1>DubLab Command Center</h1>
+          <div class="sub">Radar → Import → Контент → Calendar → Борлуулалт</div>
+        </div>
+        <div class="tabs">
+          <button onclick="showTab('radar')">🛰️ Radar</button>
+          <button class="secondary" onclick="showTab('import')">📥 Import</button>
+          <button class="secondary" onclick="showTab('content')">🎬 Контент</button>
+          <button class="secondary" onclick="showTab('inbox')">💬 Мессеж</button>
+          <button class="secondary" onclick="showTab('plan')">📅 Төлөвлөгөө</button>
+          <button class="secondary" onclick="showTab('calendar')">🗓️ Календарь</button>
+          <button class="secondary" onclick="showTab('sales')">💰 Борлуулалт</button>
+          <button class="danger" onclick="resetAll()">Reset</button>
+          <button class="secondary" onclick="logout()">Гарах</button>
+        </div>
+      </header>
+
+      <div class="notice">✅ MVP 6: органик өсөлт, контент календарь, борлуулалтын орлогын зорилго, lead-to-sale plan, scheduled post tracker нэг дор орлоо.</div>
+      <br>
+
+      <section id="radar" class="tab">
+        <div class="actions" style="margin-bottom:14px"><button class="secondary" onclick="copyAllRadar()">📋 Бүх Radar signal copy хийх</button></div>
+        <div id="radarCards" class="grid"></div>
+      </section>
+
+      <section id="import" class="tab hidden">
+        <div class="grid2">
+          <div class="card stack">
+            <h2>Өдрийн Trend Radar оруулах</h2>
+            <p class="small">Trend Radar тайлангаа copy хийгээд доорх шар товчийг дар. Дараа нь “Оруулах + Video draft үүсгэх” дарна.</p>
+            <button class="gold" onclick="pasteTrendFromClipboard()">📋 Trend Radar paste хийх</button>
+            <textarea id="trendImport" oninput="saveForm()" placeholder="Өдрийн Trend Radar тайлангаа энд paste хийнэ..."></textarea>
+            <p class="small">Хэрвээ Paste товч ажиллахгүй бол энэ box дээр удаан дараад Paste сонго.</p>
+            <div class="actions">
+              <button onclick="importTrendReport()">Оруулах + Video draft үүсгэх</button>
+              <button class="secondary" onclick="loadSampleTrend()">Жишээ оруулах</button>
+              <button class="secondary" onclick="clearImport()">Цэвэрлэх</button>
+            </div>
+          </div>
+          <div class="card stack">
+            <h2>Import хийх дүрэм</h2>
+            <div class="mono">1. Trend Radar-аас 3 signal гаргана.
+2. 2 ширхэг video хийхэд бэлэн draft үүсгэнэ.
+3. Public content-д prompt, provider, architecture, зардал гаргахгүй.
+4. Content tab дээр шууд засаж, зөвшөөрч, эцсийн video package татна.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="content" class="tab grid2 hidden"></section>
+
+      <section id="inbox" class="tab grid2 hidden">
+        <div class="card stack">
+          <h2>Мессежийн ухаалаг хариу</h2>
+          <p class="small">Messenger/comment текстээ copy хийж оруул. Систем хариуны draft гаргана.</p>
+          <textarea id="msg" oninput="saveForm()">Үнэ хэд вэ? 30 минутын бичлэг орчуулж дуу оруулах боломжтой юу?</textarea>
+          <select id="tone" onchange="saveForm(); makeReply();">
+            <option value="professional">Мэргэжлийн</option>
+            <option value="warm">Дулаан</option>
+            <option value="short">Богино</option>
+            <option value="price">Үнэ асуусан</option>
+            <option value="demo">Demo хүссэн</option>
+          </select>
+          <button onclick="makeReply()">Хариуны draft үүсгэх</button>
+        </div>
+        <div class="card stack">
+          <h2>Хариуны draft</h2>
+          <div id="reply" class="mono"></div>
+          <div class="actions"><button onclick="copyReply()">Copy</button><button class="secondary" onclick="saveReply()">Хариу хадгалах</button></div>
+          <h3>Хадгалсан хариунууд</h3>
+          <div id="savedReplies" class="stack"></div>
+        </div>
+      </section>
+
+      <section id="plan" class="tab hidden card">
+        <h2>7 хоногийн маркетинг төлөвлөгөө</h2>
+        <table><thead><tr><th>Өдөр</th><th>Контент</th><th>Дуудлага</th></tr></thead><tbody id="planRows"></tbody></table>
+        <br><label class="small">Чиглэлийн тэмдэглэл</label><textarea id="direction" oninput="saveForm()">Илүү нууцлаг lab style болго.</textarea>
+        <br><br><label class="small">Өнөөдрийн бодит ажил</label><textarea id="todayTask" oninput="saveForm()">Өнөөдөр 2 short: 1) AI-г бизнесийн систем болго 2) Random clip биш value clip.</textarea>
+      </section>
+
+
+      <section id="calendar" class="tab hidden">
+        <div class="card stack">
+          <h2>Органик контент календарь</h2>
+          <p class="small">Boost хийхгүй. Facebook, TikTok, YouTube Shorts дээр organik reach авахын тулд өдөр бүр тогтмол post schedule барина.</p>
+          <div class="actions">
+            <button onclick="copyWeeklyCalendar()">📋 7 хоногийн календарь copy</button>
+            <button class="secondary" onclick="resetCalendar()">Календарь reset</button>
+          </div>
+          <div id="calendarList" class="stack"></div>
+        </div>
+        <br>
+        <div class="grid2">
+          <div class="card stack">
+            <h2>Organic growth дүрэм</h2>
+            <div class="mono">1. Boost хийхгүй. Эхний 30 хоногт зөвхөн organic.
+2. Өдөрт 2 content:
+   - 1 demo/proof video
+   - 1 education/problem video
+3. CTA нэг л байх:
+   - DEMO / VIDEO / SHORT гэж comment эсвэл DM
+4. 24 цагийн дотор бүх comment/DM-д хариулах.
+5. Долоо хоног бүр хамгийн сайн hook-ийг дахин өөр angle-аар гаргах.
+6. Copyright risk багасгах: full clip биш, богино reference/blur/sample footage ашиглах.</div>
+          </div>
+          <div class="card stack">
+            <h2>Платформ тус бүрийн үүрэг</h2>
+            <div class="mono">Facebook:
+- Lead авах гол суваг
+- Page + personal биш brand-style page
+- Groups дээр шууд spam хийхгүй, problem/education post
+
+TikTok:
+- Reach авах туршилтын суваг
+- Hook хүчтэй, 15–25 сек
+
+YouTube Shorts:
+- Search + long-term discovery
+- Before/after demo, workflow proof
+
+Inbox:
+- DM ирсэн хүн бүр lead tracker рүү орно
+- Reply draft → follow-up → demo санал</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sales" class="tab hidden">
+        <div class="grid2">
+          <div class="card stack">
+            <h2>30 хоногийн өсөлт + борлуулалтын төлөвлөгөө</h2>
+            <div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+              <div><label class="small">30 хоногийн орлогын зорилго ₮</label><input id="revenueGoal" oninput="saveForm(); renderRevenue();" /></div>
+              <div><label class="small">Дундаж захиалга ₮</label><input id="avgOrder" oninput="saveForm(); renderRevenue();" /></div>
+              <div><label class="small">Одоогийн орлого ₮</label><input id="currentRevenue" oninput="saveForm(); renderRevenue();" /></div>
+            </div>
+            <div id="revenueBox" class="mono"></div>
+            <div class="mono">Зорилго: 30 хоногт 1000+ relevant үзэгч, 30+ DM/lead, 5+ paid test order авах.
+
+1-р 7 хоног — Итгэл үүсгэх
+- Өдөр бүр 2 short: 1 demo, 1 education.
+- CTA: “DEMO” эсвэл “VIDEO” гэж бич.
+- Гол KPI: comment, DM, save.
+
+2-р 7 хоног — Problem гаргах
+- “Танай англи video Монгол хүнд ойлгогдож байна уу?”
+- “Subtitle хангалтгүй. Voiceover илүү ойр.”
+- 10 бизнес/page рүү soft DM санал явуулах.
+- Гол KPI: reply rate.
+
+3-р 7 хоног — Offer гаргах
+- 30–60 сек demo test package санал болго.
+- 3 package: Short demo / Video localization / Monthly content reuse.
+- Гол KPI: test order.
+
+4-р 7 хоног — Proof + давталт
+- Before/after үр дүнг нууцлалтай харуул.
+- Customer feedback screenshot/quote.
+- Best performing content-ийг дахин өөр hook-той гарга.</div>
+          </div>
+          <div class="card stack">
+            <h2>Борлуулалтын offer</h2>
+            <div class="mono">Package 1 — Demo test
+30–60 сек video хэсгийг Монгол script + voiceover + caption болгож туршина.
+
+Package 2 — Short-form localization
+1 video → 3 short clips → Монгол voiceover + caption + CTA.
+
+Package 3 — Monthly content reuse
+Сар бүр 4–8 existing video-г Монгол audience-д зориулсан short package болгоно.
+
+Public байршуулалт:
+“Бид tool зардаггүй. Танай video-г Монгол үзэгчдэд ойлгомжтой sales asset болгодог.”</div>
+          </div>
+        </div>
+
+        <br>
+        <div class="grid2">
+          <div class="card stack">
+            <h2>Lead tracker</h2>
+            <input id="leadName" placeholder="Lead нэр / page / хүн" oninput="saveForm()" />
+            <textarea id="leadNeed" placeholder="Юу хэрэгтэй гэж бичсэн бэ?" oninput="saveForm()"></textarea>
+            <select id="leadStatus" onchange="saveForm()">
+              <option value="new">Шинэ lead</option>
+              <option value="demo">Demo хүссэн</option>
+              <option value="price">Үнэ асуусан</option>
+              <option value="followup">Дахин холбогдох</option>
+              <option value="paid">Paid болсон</option>
+              <option value="lost">Алдсан</option>
+            </select>
+            <div class="actions">
+              <button onclick="addLead()">Lead нэмэх</button>
+              <button class="secondary" onclick="copySalesDM()">📋 Sales DM copy</button>
+            </div>
+          </div>
+          <div class="card stack">
+            <h2>Leads</h2>
+            <div id="leadList" class="stack"></div>
+          </div>
+        </div>
+
+        <br>
+        <div class="card stack">
+          <h2>Өдөр тутмын action checklist</h2>
+          <div class="mono">[ ] Trend Radar import хийх
+[ ] 2 video draft үүсгэх
+[ ] 1 demo video approve хийх
+[ ] 1 education video approve хийх
+[ ] 10 relevant page/business жагсаах
+[ ] 3 soft DM явуулах
+[ ] Comment/DM-д 24 цагийн дотор хариулах
+[ ] Өдрийн KPI тэмдэглэх: views / comments / DM / lead / paid</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  <div id="toast" class="toast"></div>
+
+<script>
+const PASSWORD = "DubLab2026!";
+const STORE = "dublab-command-center-mvp47";
+const SESSION = "dublab-command-center-session-v47";
+
+const defaultSignals = [
+ {layer:"Platform",title:"AI + content сонирхол өсөж байна",score:88,signal:"AI + content + side income төрлийн сургалт, клубүүд Монгол залуусын дунд яригдаж байна.",mn:"AI-г hype биш, Монголд хэрэгтэй үйлчилгээ болгох өнцгөөр буулгана.",biz:"Гадаад видео, сургалт, podcast-ыг natural Монгол дуу оруулгатай болгох demo content гаргана."},
+ {layer:"Monetization",title:"Clip upload vs value-added content",score:82,signal:"Random clip upload, faceless page, short-form monetization сонирхол өсөж байна.",mn:"Зүгээр хуулбарлах биш, Монгол үзэгчид ойлгомжтой болгох message ашиглана.",biz:"AI dubbing/localization-ийг value-added content engine гэж байршуулна."},
+ {layer:"AI/Tool",title:"Before/after demo итгэл төрүүлдэг",score:91,signal:"Before/after demo нь tool тайлбарлахаас илүү хурдан ойлгуулдаг формат хэвээр байна.",mn:"Монгол хэлний natural voice, модон биш орчуулгын ялгааг харуулна.",biz:"Өдөр бүр 1 богино real test: original → Mongolian dub → comment feedback."}
+];
+
+const defaultDrafts = [
+ {id:"video-001",status:"draft",style:"anonymous_lab",title:"AI-г бизнесийн систем болго",hook:"AI-гүй хүн хоцорно гэж ярьж байна. Гэхдээ AI-г яг яаж мөнгө болгох вэ?",script:"Одоо AI-г зүгээр чат бичүүлэхэд ашиглавал бага ашиг. Жинхэнэ боломж нь гадаад контентыг Монголд ойлгомжтой болгох дээр байна. Кино, сургалт, YouTube video, podcast — бүгдийг natural Монгол хэлээр дуу оруулгатай болгож чадвал энэ өөрөө үйлчилгээ, контент, бизнес болно. DubLab яг ийм системийг туршиж байна.",screen:"AI-г хэрэглэгч биш, систем болго.",caption:"AI-г зүгээр ашиглах биш, Монголд хэрэгтэй бүтээгдэхүүн болгох цаг ирсэн. Гадаад контентыг natural Монгол хэлтэй болгох AI dubbing систем туршиж байна.",hashtags:"#AIМонгол #AIDubbing #МонголКонтент #AIБизнес #MongolianDubbing",cta:"Demo үзмээр байвал ‘DEMO’ гэж бич.",assets:"10–15 сек foreign dialogue sample, Mongolian voice demo, upload/result screen recording",ownerNote:""},
+ {id:"video-002",status:"draft",style:"warning_opportunity",title:"Random clip биш, value clip",hook:"Зүгээр clip тасдаад оруулах уу, эсвэл үнэ цэн нэмээд оруулах уу?",script:"Clip тасдаж оруулах тренд болж байна. Гэхдээ random clip бол эрсдэлтэй: copyright, account ban, давхардсан контент. Харин гадаад clip-ийг Монгол хэлээр тайлбарлаж, natural орчуулж, дуу оруулж, өөрийн өнцөг нэмбэл тэр нь үнэ цэнтэй контент болно. DubLab энэ процессыг хурдан болгох зорилготой.",screen:"Random clip биш. Монголчилсон value clip.",caption:"Контентын дараагийн шат бол зүгээр хуулбарлах биш, Монгол үзэгчид ойлгомжтой үнэ цэнтэй болгох.",hashtags:"#ReelsMongolia #ClipContent #AIОрчуулга #MongolianDubbing #КонтентБизнес",cta:"Ийм demo өдөр бүр үзмээр байвал ‘+’ гэж бич.",assets:"Blurred original clip, Mongolian dubbed version, simple before/after layout",ownerNote:""}
+];
+
+const defaults = {
+  drafts: defaultDrafts,
+  signals: null,
+  msg: "Үнэ хэд вэ? 30 минутын бичлэг орчуулж дуу оруулах боломжтой юу?",
+  tone: "professional",
+  direction: "Илүү нууцлаг lab style болго.",
+  todayTask: "Өнөөдөр 2 short: 1) AI-г бизнесийн систем болго 2) Random clip биш value clip.",
+  savedReplies: [],
+  trendImport: "",
+  leadName: "",
+  leadNeed: "",
+  leadStatus: "new",
+  leads: [],
+  revenueGoal: "1500000",
+  avgOrder: "150000",
+  targetOrders: "10",
+  currentRevenue: "0",
+  contentCalendar: [
+    {day:"Даваа", time:"09:00", platform:"Facebook Reel + TikTok + Shorts", type:"Demo", task:"Before/After AI dubbing demo", cta:"DEMO гэж бич", status:"planned"},
+    {day:"Мягмар", time:"12:30", platform:"Facebook Page", type:"Education", task:"Random clip биш value-added clip", cta:"VIDEO гэж DM", status:"planned"},
+    {day:"Лхагва", time:"19:30", platform:"Reels + Shorts", type:"Proof", task:"Natural Mongolian translation test", cta:"Natural уу?", status:"planned"},
+    {day:"Пүрэв", time:"12:30", platform:"Facebook group/page", type:"Problem", task:"Танай англи video Монгол хүнд ойлгогдож байна уу?", cta:"Demo авах", status:"planned"},
+    {day:"Баасан", time:"18:30", platform:"Reels + TikTok", type:"Offer", task:"30–60 сек demo test package", cta:"VIDEO гэж бич", status:"planned"},
+    {day:"Бямба", time:"11:00", platform:"Facebook Reel", type:"Workflow", task:"1 урт video → 3 short Монгол voice", cta:"SHORT гэж DM", status:"planned"},
+    {day:"Ням", time:"20:00", platform:"Facebook/YouTube Community", type:"Recap", task:"7 хоногийн туршилтын recap", cta:"Follow", status:"planned"}
+  ]
+};
+
+const plan = [["Даваа","Before/after AI dubbing demo","Demo comment"],["Мягмар","Random clip vs value-added clip","DM for test"],["Лхагва","Natural Mongolian translation test","Natural уу?"],["Пүрэв","Voice matching lab report","Аль хоолой тохирч байна?"],["Баасан","Offer / pricing soft post","Video length send"],["Бямба","Customer problem education","Demo авах"],["Ням","Weekly progress recap","Follow for tests"]];
+
+let state = load();
+
+function clone(x){ return JSON.parse(JSON.stringify(x)); }
+function load(){ try{return Object.assign(clone(defaults), JSON.parse(localStorage.getItem(STORE)||"{}"));}catch(e){return clone(defaults);} }
+function save(){ localStorage.setItem(STORE, JSON.stringify(state)); }
+function toastMsg(message){ const el=document.getElementById("toast"); el.textContent=message; el.classList.add("show"); clearTimeout(window.__toastTimer); window.__toastTimer=setTimeout(()=>el.classList.remove("show"),1500); }
+
+function loginKey(e){ if(e.key==="Enter"){ enter(); } }
+function togglePassword(){
+ const btn = event.currentTarget;
+ if(pass.type==="password"){ pass.type="text"; btn.textContent="🙈 Нуух"; }
+ else { pass.type="password"; btn.textContent="👁️ Харах"; }
+}
+function enter(){ if(pass.value===PASSWORD){ localStorage.setItem(SESSION,"yes"); openApp(); } else err.textContent="Нууц үг буруу байна."; }
+function openApp(){ login.classList.add("hidden"); app.classList.remove("hidden"); hydrate(); render(); makeReply(); }
+function logout(){ localStorage.removeItem(SESSION); login.classList.remove("hidden"); app.classList.add("hidden"); }
+function boot(){ if(localStorage.getItem(SESSION)==="yes") openApp(); }
+window.addEventListener("DOMContentLoaded", boot);
+setTimeout(boot,0);
+
+function showTab(id){ document.querySelectorAll(".tab").forEach(x=>x.classList.add("hidden")); document.getElementById(id).classList.remove("hidden"); }
+function hydrate(){ msg.value=state.msg; tone.value=state.tone; direction.value=state.direction; todayTask.value=state.todayTask; trendImport.value=state.trendImport||"";
+ leadName.value=state.leadName||""; leadNeed.value=state.leadNeed||""; leadStatus.value=state.leadStatus||"new"; revenueGoal.value=state.revenueGoal||"1500000"; avgOrder.value=state.avgOrder||"150000"; currentRevenue.value=state.currentRevenue||"0"; }
+function saveForm(){ state.msg=msg.value; state.tone=tone.value; state.direction=direction.value; state.todayTask=todayTask.value; state.trendImport=trendImport.value; state.leadName=leadName?.value||state.leadName; state.leadNeed=leadNeed?.value||state.leadNeed; state.leadStatus=leadStatus?.value||state.leadStatus; if(typeof revenueGoal!=="undefined"){ state.revenueGoal=revenueGoal.value; state.avgOrder=avgOrder.value; state.currentRevenue=currentRevenue.value; } save(); }
+
+function render(){
+ renderRadar(); renderContent(); renderReplies(); renderLeads(); renderCalendar(); renderRevenue();
+ planRows.innerHTML=plan.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("");
+}
+function esc(v){ return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function renderRadar(){
+ const arr = state.signals || defaultSignals;
+ radarCards.innerHTML=arr.map((s,i)=>`<div class="card"><div class="row"><span class="pill">${s.layer}</span><span class="score">${s.score}</span></div><div class="title">${s.title}</div><p class="small">${s.signal}</p><p><b>Монголд буулгах:</b> ${s.mn}</p><p><b>Dubbing бизнес өнцөг:</b> ${s.biz}</p><div class="actions"><button class="secondary" onclick="copyRadar(${i})">📋 Signal copy хийх</button></div></div>`).join("");
+}
+function renderContent(){
+ content.innerHTML=state.drafts.map((d,i)=>`<div class="card stack">
+  <div class="row"><div><div class="small">${d.id} · ${d.style}</div><div class="title">${d.title}</div></div><span class="pill ${d.status}">${d.status}</span></div>
+  <label class="small">Гарчиг</label><input value="${esc(d.title)}" oninput="editDraft(${i}, 'title', this.value)" />
+  <label class="small">Эхний татах өгүүлбэр</label><textarea oninput="editDraft(${i}, 'hook', this.value)">${esc(d.hook)}</textarea>
+  <label class="small">Унших script</label><textarea oninput="editDraft(${i}, 'script', this.value)">${esc(d.script)}</textarea>
+  <label class="small">Дэлгэц дээрх текст</label><textarea oninput="editDraft(${i}, 'screen', this.value)">${esc(d.screen)}</textarea>
+  <label class="small">Caption</label><textarea oninput="editDraft(${i}, 'caption', this.value)">${esc(d.caption)}</textarea>
+  <label class="small">Hashtag</label><textarea oninput="editDraft(${i}, 'hashtags', this.value)">${esc(d.hashtags)}</textarea>
+  <label class="small">CTA</label><textarea oninput="editDraft(${i}, 'cta', this.value)">${esc(d.cta)}</textarea>
+  <label class="small">Хэрэгтэй материал</label><textarea oninput="editDraft(${i}, 'assets', this.value)">${esc(d.assets)}</textarea>
+  <label class="small">Миний тэмдэглэл</label><textarea oninput="editDraft(${i}, 'ownerNote', this.value)">${esc(d.ownerNote||"")}</textarea>
+  <div class="actions">
+    <button onclick="setStatus(${i},'approved')">Зөвшөөрөх</button>
+    <button class="secondary" onclick="regen(${i})">Дахин үүсгэх</button>
+    <button class="secondary" onclick="setStatus(${i},'rejected')">Татгалзах</button>
+    <button class="secondary" onclick="duplicateDraft(${i})">Хувилах</button>
+    <button class="secondary" onclick="copyVideoPackage(${i})">📋 Video package copy</button>
+    <button class="secondary" onclick="pkg(${i})">🎥 Эцсийн video package</button>
+    <button class="danger" onclick="deleteDraft(${i})">Устгах</button>
+  </div>
+ </div>`).join("");
+}
+function editDraft(i, field, value){ state.drafts[i][field]=value; save(); }
+function setStatus(i,s){ state.drafts[i].status=s; save(); renderContent(); }
+function regen(i){ const n=state.drafts[i].ownerNote || state.direction || "Илүү нууцлаг lab style болго."; state.drafts[i].caption += "\n\nЗасах чиглэл: "+n; state.drafts[i].status="draft"; save(); renderContent(); }
+function duplicateDraft(i){ const d=clone(state.drafts[i]); d.id=d.id+"-copy-"+Date.now().toString().slice(-4); d.status="draft"; d.title=d.title+" copy"; state.drafts.unshift(d); save(); renderContent(); }
+function deleteDraft(i){ if(confirm("Энэ draft-ыг устгах уу?")){ state.drafts.splice(i,1); save(); renderContent(); } }
+
+function finalPackageText(d){
+ const scenes = [
+  ["0–3 сек", "Эхний татах өгүүлбэр", d.hook],
+  ["3–8 сек", "Асуудал/тренд", "Трендийг зүгээр дагах биш Монгол үзэгчид ойлгомжтой үнэ цэн болгох санааг харуул."],
+  ["8–18 сек", "DubLab шийдэл", "Original → Монгол script → Монгол AI voice → demo гэсэн flow-г богиноор харуул."],
+  ["18–25 сек", "Proof/demo", "Before/after эсвэл result screen харуул. Хэт их tool тайлбарлахгүй."],
+  ["25–30 сек", "CTA", d.cta]
+ ];
+ return `ЭЦСИЙН SHORT VIDEO АЖЛЫН ХУУДАС
+${d.title}
+
+1. VIDEO-НЫ ЗОРИЛГО
+Энэ video нь үзэгчид трендийг ойлгуулахаас гадна DubLab-ийн AI Mongolian dubbing/localization value-г харуулах зориулалттай.
+
+2. ЭХНИЙ 3 СЕКУНД
+${d.hook}
+
+3. УНШИХ / VOICEOVER SCRIPT
+${d.script}
+
+4. ЭВЛҮҮЛГИЙН ТӨЛӨВЛӨГӨӨ
+${scenes.map((s,idx)=>`${idx+1}) ${s[0]} — ${s[1]}
+   ${s[2]}`).join("\n\n")}
+
+5. ДЭЛГЭЦ ДЭЭР ГАРАХ ТЕКСТ
+${d.screen}
+
+6. НИЙТЛЭХ CAPTION
+${d.caption}
+
+7. HASHTAG
+${d.hashtags}
+
+8. CTA
+${d.cta}
+
+9. ХЭРЭГТЭЙ МАТЕРИАЛ
+${d.assets}
+
+10. ЧАНАРЫН CHECKLIST
+[ ] Эхний 3 секунд анхаарал татаж байна
+[ ] Монгол хэл natural, модон биш байна
+[ ] Дотоод tool/prompt/provider нэр гараагүй
+[ ] Before/after эсвэл бодит үр дүн харагдаж байна
+[ ] CTA тодорхой байна
+[ ] Нууцлаг lab style хадгалагдсан
+
+11. МИНИЙ ТЭМДЭГЛЭЛ
+${d.ownerNote||""}`;
+}
+function copyVideoPackage(i){ navigator.clipboard.writeText(finalPackageText(state.drafts[i])).then(()=>toastMsg("Video package copy хийгдлээ")).catch(()=>toastMsg("Copy амжилтгүй")); }
+function pkg(i){ const d=state.drafts[i]; const blob=new Blob([finalPackageText(d)],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=d.id+"-video-ajliin-huudas.txt"; a.click(); }
+
+function signalText(s){ return `Давхарга: ${s.layer}\nГарчиг: ${s.title}\nОноо: ${s.score}\n\nSignal:\n${s.signal}\n\nМонголд буулгах:\n${s.mn}\n\nDubbing бизнес өнцөг:\n${s.biz}`; }
+function copyRadar(i){ const arr=state.signals||defaultSignals; navigator.clipboard.writeText(signalText(arr[i])).then(()=>toastMsg("Radar signal copy хийгдлээ")).catch(()=>toastMsg("Copy амжилтгүй")); }
+function copyAllRadar(){ const arr=state.signals||defaultSignals; const text=arr.map((s,i)=>`#${i+1}\n${signalText(s)}`).join("\n\n---\n\n"); navigator.clipboard.writeText(text).then(()=>toastMsg("Бүх Radar signal copy хийгдлээ")).catch(()=>toastMsg("Copy амжилтгүй")); }
+
+async function pasteTrendFromClipboard(){
+ try{
+  if(!navigator.clipboard || !navigator.clipboard.readText){ toastMsg("Box дээр удаан дараад Paste сонго"); return; }
+  const text=await navigator.clipboard.readText();
+  if(!text.trim()){ toastMsg("Clipboard хоосон байна"); return; }
+  trendImport.value=text; saveForm(); toastMsg("Paste хийгдлээ");
+ }catch(e){ toastMsg("Box дээр удаан дараад Paste сонго"); }
+}
+function loadSampleTrend(){ trendImport.value="🛰️ Trend Radar — Today\n⚡ TOP 3: AI automation, short-form clip monetization, paid creator community.\n📱 Platform Signal: TikTok/Reels short educational clips.\n🤖 AI/Tool Signal: AI voice, dubbing, localization demo tools.\n💰 Monetization Signal: creators selling services, communities, and content packages."; saveForm(); }
+function clearImport(){ trendImport.value=""; saveForm(); }
+
+function makeSignalsFromReport(text){
+ const lower=text.toLowerCase(); const sigs=[];
+ function add(layer,title,signal,score,mn,biz){ sigs.push({layer,title,signal,score,mn,biz});}
+ if(lower.includes("ai")||lower.includes("хиймэл")||lower.includes("tool")) add("AI/Tool","AI tool / automation signal","AI, automation, creator tool төрлийн signal илэрлээ. Үүнийг tool тайлбар биш, бодит workflow/demo хэлбэрээр харуулах нь тохиромжтой.",90,"Монголд AI-г хий хоосон hype биш, бодит үйлчилгээ/ажлын урсгал болгож буулгана.","AI dubbing системийг creator-д цаг хэмнэдэг, output гаргадаг engine гэж харуулна.");
+ if(lower.includes("clip")||lower.includes("short")||lower.includes("tiktok")||lower.includes("reels")) add("Platform","Short-form / clip format signal","Short video, clip, Reels/TikTok маягийн хурдан consume content signal илэрлээ.",87,"Random clip биш, Монгол үзэгчид ойлгомжтой болгосон value-added clip гэсэн өнцөг барина.","Original → Mongolian natural dubbing before/after demo үүсгэнэ.");
+ if(lower.includes("money")||lower.includes("монет")||lower.includes("skool")||lower.includes("сургалт")||lower.includes("community")||lower.includes("орлого")) add("Monetization","Paid community / service monetization signal","Community, course, service, side income, monetization signal илэрлээ.",84,"Монголд хүмүүс мөнгө төлж байгаа problem — контент, сургалт, видео орчуулга — дээр байршуулна.","Dubbing/localization-ийг B2B service, creator tool, content package гэж санал болгоно.");
+ if(sigs.length<3) add("Search","Emerging interest signal","Өсөж буй сонирхол байгаа ч source-уудыг илүү шалгах хэрэгтэй.",76,"Монголд туршилтын постоор demand шалгана.","2 demo clip гаргаж comment/DM response хэмжинэ.");
+ return sigs.slice(0,3);
+}
+function makeDraftsFromReport(text){
+ const short=text.replace(/\s+/g," ").slice(0,160);
+ const now=new Date().toISOString().slice(0,10);
+ return [
+  {id:"import-"+now+"-01",status:"draft",style:"anonymous_lab",title:"Өнөөдрийн трендийг Монгол demo болгох",hook:"Энэ трендийг Монголд шууд хэрэгтэй demo болговол яах вэ?",script:"Өнөөдрийн signal дээр нэг зүйл тод байна: дэлхийд өсөж байгаа трендийг шууд хуулбарлах биш, Монгол үзэгчид ойлгомжтой үнэ цэн болгож буулгах хэрэгтэй. DubLab үүнийг AI dubbing/localization demo болгож туршина. Original content → natural Монгол script → Монгол AI voice → short demo. Гол асуулт: энэ natural сонсогдож байна уу?",screen:"Trend → Mongolian demo",caption:"Өнөөдрийн трендийг Монголд хэрэгтэй AI dubbing demo болгож туршиж байна. Natural байна уу?",hashtags:"#DubLab #AIМонгол #MongolianDubbing #ContentMongolia #AIОрчуулга",cta:"Natural байна уу гэдгээ comment-д бич.",assets:"Trend report excerpt, 10–15 sec foreign sample, Mongolian voice demo",ownerNote:"Trend Radar-аас үүссэн: "+short},
+  {id:"import-"+now+"-02",status:"draft",style:"demo_before_after",title:"Original → Монгол дуу оруулга proof",hook:"Tool ярихгүй. Шууд үр дүнг нь харуулъя.",script:"Олон хүн AI гэж ярьж байна. Гэхдээ үзэгчид tool нэр биш, үр дүн хармаар байна. Тиймээс өнөөдрийн test: богино foreign clip аваад natural Монгол хэлээр орчуулж, тохирох AI voice-оор уншуулж, before/after хэлбэрээр харуулна. Хэрвээ Монгол хувилбар нь модон биш сонсогдож байвал энэ бол жинхэнэ боломж.",screen:"Original → Монгол voice",caption:"Tool ярьснаас үр дүн харуулъя. Original clip-ийг natural Монгол дуу оруулгатай болгох test.",hashtags:"#AIDubbing #МонголДууОруулга #BeforeAfter #AIContent #МонголКонтент",cta:"Ийм demo авах бол DM.",assets:"Original clip, Mongolian script, voiceover audio, side-by-side layout",ownerNote:"Trend Radar-аас үүссэн: "+short}
+ ];
+}
+function importTrendReport(){
+ const text=trendImport.value.trim();
+ if(!text){ toastMsg("Trend Radar report paste хийгээгүй байна"); return; }
+ state.trendImport=text; state.signals=makeSignalsFromReport(text); state.drafts=makeDraftsFromReport(text).concat(state.drafts||[]); save(); render(); showTab("content"); toastMsg("2 шинэ video draft үүслээ");
+}
+
+function makeReply(){
+ saveForm();
+ let base="Сайн байна уу. Боломжтой. Бичлэгийн урт, эх хэл, хүсэж байгаа output буюу subtitle эсвэл Монгол AI дуу оруулгатай demo эсэхээ явуулбал тохирох хувилбар, хугацаа, үнийн санал хэлж өгье.";
+ if(state.tone==="warm") base+=" Эхний богино хэсгээр test demo гаргаад чанарыг нь хамт шалгаж болно.";
+ if(state.tone==="short") base="Сайн байна уу. Боломжтой. Бичлэгийн урт, хэл, subtitle эсвэл дуу оруулга хэрэгтэй эсэхээ явуулна уу. Тэгээд хугацаа, үнийн санал хэлж өгье.";
+ if(state.tone==="price") base="Сайн байна уу. Үнэ нь бичлэгийн урт, эх хэл, subtitle эсвэл дуу оруулгатай output эсэхээс хамаарна. Бичлэгийн минут, хэл, deadline-аа явуулбал яг тохирсон санал хэлж өгье.";
+ if(state.tone==="demo") base="Сайн байна уу. Demo хийж болно. 30–60 секундийн богино хэсэг эсвэл линк явуулбал natural Монгол орчуулга/дуу оруулгын test хувилбар гаргаж шалгаж болно.";
+ reply.textContent=base; return base;
+}
+function copyReply(){ navigator.clipboard.writeText(reply.textContent).then(()=>toastMsg("Хариу copy хийгдлээ")); }
+function saveReply(){ state.savedReplies.unshift({time:new Date().toLocaleString(), text:reply.textContent}); save(); renderReplies(); toastMsg("Хариу хадгалагдлаа"); }
+function renderReplies(){ savedReplies.innerHTML=(state.savedReplies||[]).slice(0,5).map(r=>`<div class="mono"><b>${r.time}</b>\n${r.text}</div>`).join("") || '<p class="small">Одоогоор хадгалсан хариу алга.</p>'; }
+
+
+function money(n){ return Number(n||0).toLocaleString("mn-MN")+"₮"; }
+function renderRevenue(){
+ if(typeof revenueBox==="undefined") return;
+ const goal=Number(state.revenueGoal||0);
+ const avg=Number(state.avgOrder||1);
+ const current=Number(state.currentRevenue||0);
+ const remaining=Math.max(goal-current,0);
+ const orders=Math.ceil(remaining/Math.max(avg,1));
+ const progress=goal?Math.round((current/goal)*100):0;
+ revenueBox.textContent=`Орлогын зорилго: ${money(goal)}
+Одоогийн орлого: ${money(current)}
+Үлдсэн орлого: ${money(remaining)}
+Дундаж захиалга: ${money(avg)}
+Зорилгод хүрэхэд хэрэгтэй ойролцоох захиалга: ${orders}
+Явц: ${progress}%
+
+Lead target:
+- 1 paid order авахын тулд ойролцоогоор 5–8 warm lead хэрэгтэй гэж тооц.
+- ${orders} paid order авахын тулд ${orders*6} орчим warm lead хэрэгтэй.
+- Өдөрт хамгийн багадаа 3 relevant DM + 2 short post хийх.`;
+}
+function renderCalendar(){
+ if(typeof calendarList==="undefined") return;
+ calendarList.innerHTML=(state.contentCalendar||[]).map((c,i)=>`<div class="card" style="box-shadow:none">
+  <div class="row"><div><b>${c.day} · ${c.time}</b><div class="small">${c.platform} · ${c.type}</div></div><span class="pill ${c.status==='posted'?'approved':'draft'}">${c.status}</span></div>
+  <p>${c.task}</p>
+  <p><b>CTA:</b> ${c.cta}</p>
+  <div class="actions">
+    <button onclick="setCalendarStatus(${i}, 'posted')">Posted</button>
+    <button class="secondary" onclick="setCalendarStatus(${i}, 'planned')">Planned</button>
+    <button class="secondary" onclick="copyCalendarItem(${i})">📋 Copy</button>
+  </div>
+ </div>`).join("");
+}
+function setCalendarStatus(i,status){ state.contentCalendar[i].status=status; save(); renderCalendar(); toastMsg(status==="posted"?"Posted гэж тэмдэглэлээ":"Planned болголоо");}
+function calendarText(c){ return `${c.day} ${c.time}
+Platform: ${c.platform}
+Type: ${c.type}
+Task: ${c.task}
+CTA: ${c.cta}
+Status: ${c.status}`; }
+function copyCalendarItem(i){ navigator.clipboard.writeText(calendarText(state.contentCalendar[i])).then(()=>toastMsg("Calendar item copy хийгдлээ")); }
+function copyWeeklyCalendar(){ navigator.clipboard.writeText((state.contentCalendar||[]).map(calendarText).join("\\n\\n---\\n\\n")).then(()=>toastMsg("7 хоногийн календарь copy хийгдлээ")); }
+function resetCalendar(){ if(confirm("Календарийг эхний төлөвлөгөө рүү reset хийх үү?")){ localStorage.removeItem(STORE); state=load(); hydrate(); render(); toastMsg("Reset хийгдлээ"); } }
+
+function addLead(){
+ saveForm();
+ if(!state.leadName && !state.leadNeed){ toastMsg("Lead мэдээлэл хоосон байна"); return; }
+ state.leads.unshift({time:new Date().toLocaleString(), name:state.leadName, need:state.leadNeed, status:state.leadStatus});
+ state.leadName=""; state.leadNeed=""; state.leadStatus="new";
+ save(); hydrate(); renderLeads(); toastMsg("Lead нэмэгдлээ");
+}
+function renderLeads(){
+ if(typeof leadList==="undefined") return;
+ const items=(state.leads||[]).slice(0,20);
+ leadList.innerHTML=items.length ? items.map((l,i)=>`<div class="mono"><b>${i+1}. ${l.name||"Нэргүй lead"}</b> · ${l.status}
+${l.need||""}
+${l.time}</div>`).join("") : '<p class="small">Одоогоор lead алга.</p>';
+}
+function copySalesDM(){
+ const text = `Сайн байна уу. Танай page/video content-г харлаа. Хэрвээ байгаа video-гоо Монгол үзэгчдэд илүү ойлгомжтой болгох хэрэгтэй бол бид 30–60 секундийн богино demo test хийж үзүүлж болно.
+
+Бид video-г зүгээр орчуулахгүй:
+- Монгол ярианы script болгоно
+- AI voiceover demo гаргана
+- caption + CTA бэлдэнэ
+- short-form хэлбэрт оруулна
+
+Demo сонирхвол 1 богино video link явуулаарай.`;
+ navigator.clipboard.writeText(text).then(()=>toastMsg("Sales DM copy хийгдлээ")).catch(()=>toastMsg("Copy амжилтгүй"));
+}
+
+function resetAll(){ if(confirm("Local хадгалсан мэдээллийг цэвэрлэх үү?")){ localStorage.removeItem(STORE); state=load(); hydrate(); render(); toastMsg("Цэвэрлэгдлээ"); } }
+</script>
+</body>
+</html>
